@@ -57,10 +57,10 @@ describe("Parsers", function () {
       it("should generate a created node", async function () {
         const result = await highland(stream)
           .where({ id: "create" })
-          .map((x) => x.features[0])
-          .find((x) => x.properties.type === "node")
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "node")
           .toPromise(Promise);
-        return assert.deepEqual(result, expectations.nodeCreated.new);
+        return assert.deepEqual(result, [expectations.nodeCreated.new]);
       });
 
       it("should generate a modified node", async function () {
