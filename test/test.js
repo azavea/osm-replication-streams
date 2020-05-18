@@ -15,8 +15,8 @@ describe("Parsers", function () {
     let stream;
 
     beforeEach(function () {
-      const rs = fs.createReadStream("./test/data/4002488.adiff.xml");
-      const parser = new AugmentedDiffParser()
+      const rs = fs.createReadStream("./test/data/adiff.xml");
+      const parser = new AugmentedDiffParser();
       stream = rs.pipe(parser);
     });
 
@@ -25,7 +25,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 6173);
+        return assert.strictEqual(result, 8);
       });
 
       it("should encounter the correct number of created objects", async function () {
@@ -33,7 +33,7 @@ describe("Parsers", function () {
           .where({ id: "create" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 4726);
+        return assert.strictEqual(result, 2);
       });
 
       it("should encounter the correct number of modified objects", async function () {
@@ -41,7 +41,7 @@ describe("Parsers", function () {
           .where({ id: "modify" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 1157);
+        return assert.strictEqual(result, 4);
       });
 
       it("should encounter the correct number of deleted objects", async function () {
@@ -49,7 +49,7 @@ describe("Parsers", function () {
           .where({ id: "delete" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 175);
+        return assert.strictEqual(result, 2);
       });
     });
 
@@ -71,7 +71,7 @@ describe("Parsers", function () {
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeModified.old,
-          expectations.nodeModified.new
+          expectations.nodeModified.new,
         ]);
       });
 
@@ -83,7 +83,40 @@ describe("Parsers", function () {
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeDeleted.old,
-          expectations.nodeDeleted.new
+          expectations.nodeDeleted.new,
+        ]);
+      });
+
+      it("should generate a created way", async function () {
+        const result = await highland(stream)
+          .where({ id: "create" })
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "way")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [expectations.wayCreated.new]);
+      });
+
+      it("should generate a modified way", async function () {
+        const result = await highland(stream)
+          .where({ id: "modify" })
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "way")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.wayModified.old,
+          expectations.wayModified.new,
+        ]);
+      });
+
+      it("should generate a deleted way", async function () {
+        const result = await highland(stream)
+          .where({ id: "delete" })
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "way")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.wayDeleted.old,
+          expectations.wayDeleted.new,
         ]);
       });
     });
