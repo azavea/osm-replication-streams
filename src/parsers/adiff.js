@@ -1,18 +1,22 @@
 const { Transform } = require("stream");
 
-const {
-  featureCollection,
-  lineString,
-  point,
-  polygon
-} = require("@turf/helpers");
-require("array-flat-polyfill");   // Remove when support dropped for Node < 11
+const { featureCollection, lineString, point, polygon } = require("@turf/helpers");
+require("array-flat-polyfill"); // Remove when support dropped for Node < 11
 const { Parser } = require("htmlparser2");
 const { isArea } = require("id-area-keys");
 const yaml = require("js-yaml");
 const isEqual = require("lodash.isequal");
+const osmtogeojson = require("osmtogeojson");
+const { DOMParser } = require("xmldom");
 
-const isClosed = coords => isEqual(coords[0], coords[coords.length - 1]);
+const isClosed = (coords) => isEqual(coords[0], coords[coords.length - 1]);
+
+const xmlAttrsToString = (attributes) => {
+  return Object.entries(attributes).reduce(
+    (xmlStr, [key, value]) => `${xmlStr} ${key}="${value}" `,
+    ""
+  );
+};
 
 const toGeoJSON = (id, element, prev) => {
   let { tags } = element;
@@ -23,6 +27,30 @@ const toGeoJSON = (id, element, prev) => {
   }
 
   switch (element.type) {
+    case "relation": {
+      const { feature } = element;
+      const { geometry } = feature;
+      const properties = {
+        id: feature.id,
+        changeset: feature.properties.changeset,
+        tags,
+        timestamp: feature.properties.timestamp,
+        type: "relation",
+        uid: feature.properties.uid,
+        user: feature.properties.user,
+        version: feature.properties.version,
+        visible,
+      };
+      // Return a native geojson object rather than a specific turf.js one. We're relying on
+      // osmtogeojson to have constructed the proper geometry for us based on the available tags.
+      return {
+        id,
+        geometry,
+        properties,
+        type: "Feature",
+      };
+    }
+
     case "node": {
       let coords = [element.lon, element.lat];
 
@@ -42,22 +70,22 @@ const toGeoJSON = (id, element, prev) => {
           uid: element.uid,
           user: element.user,
           version: element.version,
-          visible
+          visible,
         },
         {
-          id
+          id,
         }
       );
     }
 
     case "way": {
-      let coords = element.nodes.map(x => [x.lon, x.lat]);
+      let coords = element.nodes.map((x) => [x.lon, x.lat]);
 
       if (element.nodes.length === 0) {
-        coords = prev.nodes.map(x => [x.lon, x.lat]);
+        coords = prev.nodes.map((x) => [x.lon, x.lat]);
       }
 
-      const nds = element.nodes.map(x => x.id || x.ref)
+      const nds = element.nodes.map((x) => x.id || x.ref);
 
       const properties = {
         changeset: element.changeset,
@@ -69,10 +97,10 @@ const toGeoJSON = (id, element, prev) => {
         uid: element.uid,
         user: element.user,
         version: element.version,
-        visible
-      }
+        visible,
+      };
 
-      if (coords.flat().some(x => x == null)) {
+      if (coords.flat().some((x) => x == null)) {
         // invalid geometry
 
         return {
@@ -80,17 +108,13 @@ const toGeoJSON = (id, element, prev) => {
           type: "Feature",
           geometry: {
             type: "GeometryCollection",
-            geometries: []
+            geometries: [],
           },
-          properties
+          properties,
         };
       }
 
-      if (
-        isClosed(coords) &&
-        isArea(element.tags) &&
-        coords.length >= 4
-      ) {
+      if (isClosed(coords) && isArea(element.tags) && coords.length >= 4) {
         return polygon([coords], properties, { id });
       }
 
@@ -98,8 +122,7 @@ const toGeoJSON = (id, element, prev) => {
         return lineString(coords, properties, { id });
       }
 
-      return point(
-        coords[0], properties, { id });
+      return point(coords[0], properties, { id });
     }
 
     default:
@@ -109,7 +132,7 @@ const toGeoJSON = (id, element, prev) => {
 module.exports = class AugmentedDiffParser extends Transform {
   constructor() {
     super({
-      readableObjectMode: true
+      readableObjectMode: true,
     });
 
     this.sequence = null;
@@ -123,16 +146,14 @@ module.exports = class AugmentedDiffParser extends Transform {
       {
         onopentag: this.startElement.bind(this),
         onclosetag: this.endElement.bind(this),
-        oncomment: comment => {
+        oncomment: (comment) => {
           try {
             const data = yaml.safeLoad(comment);
 
             if (data.status === "start") {
               this.sequence = data.sequenceNumber;
               // Overpass sequences are minute offsets from 2012-09-12T06:55:00.000Z
-              this.timestamp = new Date(
-                (this.sequence * 60 + 1347432900) * 1000
-              );
+              this.timestamp = new Date((this.sequence * 60 + 1347432900) * 1000);
               this.emit("sequenceStart", this.sequence);
             }
 
@@ -146,16 +167,16 @@ module.exports = class AugmentedDiffParser extends Transform {
             // push a marker into the stream
             this.push({
               type: "Marker",
-              properties: data
+              properties: data,
             });
           } catch (err) {
             // not yaml
           }
         },
-        onerror: err => console.warn(err) && this.emit("error", err)
+        onerror: (err) => console.warn(err) && this.emit("error", err),
       },
       {
-        xmlMode: true
+        xmlMode: true,
       }
     );
 
@@ -175,15 +196,15 @@ module.exports = class AugmentedDiffParser extends Transform {
       case "osm":
         this.nodes = {
           old: {},
-          new: {}
+          new: {},
         };
         this.ways = {
           old: {},
-          new: {}
+          new: {},
         };
         this.relations = {
           old: {},
-          new: {}
+          new: {},
         };
         this.nds = {};
 
@@ -211,7 +232,7 @@ module.exports = class AugmentedDiffParser extends Transform {
           lat: lat ? Number(lat) : null,
           lon: lon ? Number(lon) : null,
           tags: {},
-          type: name
+          type: name,
         };
 
         break;
@@ -222,7 +243,7 @@ module.exports = class AugmentedDiffParser extends Transform {
           ...attributes,
           nodes: [],
           tags: {},
-          type: name
+          type: name,
         };
 
         break;
@@ -230,17 +251,27 @@ module.exports = class AugmentedDiffParser extends Transform {
       case "relation":
         this[this.state] = {
           ...attributes,
-          members: [],
+          feature: null,
           tags: {},
-          type: name
+          type: name,
+          xml: `<relation ${xmlAttrsToString(attributes)}>`,
         };
 
         break;
 
+      case "member": {
+        const element = this[this.state];
+        if (element.type === "relation") {
+          const attrs = xmlAttrsToString(attributes);
+          element.xml += `<member ${attrs}>`;
+        }
+        break;
+      }
+
       case "tag":
         this[this.state].tags = {
           ...this[this.state].tags,
-          [attributes.k]: attributes.v
+          [attributes.k]: attributes.v,
         };
 
         break;
@@ -255,13 +286,16 @@ module.exports = class AugmentedDiffParser extends Transform {
             const nd = {
               ref,
               lat: lat ? Number(lat) : null,
-              lon: lon ? Number(lon) : null
+              lon: lon ? Number(lon) : null,
             };
 
             element.nodes = [...element.nodes, nd];
 
             break;
           }
+          case "relation":
+            element.xml += `<nd ${xmlAttrsToString(attributes)}/>`;
+            break;
 
           default:
         }
@@ -283,8 +317,7 @@ module.exports = class AugmentedDiffParser extends Transform {
 
         const { old: prev, new: next } = this;
 
-        // no support for relations yet
-        if (["node", "way"].includes(next.type)) {
+        if (["node", "way", "relation"].includes(next.type)) {
           if (prev == null) {
             try {
               const ng = toGeoJSON("new", next);
@@ -294,7 +327,7 @@ module.exports = class AugmentedDiffParser extends Transform {
 
               this.push(
                 featureCollection([ng], {
-                  id: this.action
+                  id: this.action,
                 })
               );
             } catch (err) {
@@ -314,10 +347,8 @@ module.exports = class AugmentedDiffParser extends Transform {
               if (next.type === "way") {
                 const nodeMeta = next.nodes
                   // filter out nodes not included in this diff
-                  .filter(x => x.timestamp)
-                  .sort(
-                    (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)
-                  );
+                  .filter((x) => x.timestamp)
+                  .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
                 if (nodeMeta.length === 0) {
                   // see way 17641595 (version 2 -> 3) in
@@ -345,7 +376,7 @@ module.exports = class AugmentedDiffParser extends Transform {
 
               this.push(
                 featureCollection([og, ng], {
-                  id: this.action
+                  id: this.action,
                 })
               );
             } catch (err) {
@@ -372,7 +403,7 @@ module.exports = class AugmentedDiffParser extends Transform {
       case "way": {
         const element = this[this.state];
 
-        element.nodes = element.nodes.map(n => {
+        element.nodes = element.nodes.map((n) => {
           let node = this.nodes[this.state][n.ref] || n;
 
           // if the node was deleted, use the old version so we have geometry
@@ -384,6 +415,33 @@ module.exports = class AugmentedDiffParser extends Transform {
           return node;
         });
 
+        break;
+      }
+
+      case "relation": {
+        const element = this[this.state];
+        const tags = Object.entries(element.tags).reduce(
+          (tagStr, [key, value]) => `${tagStr}<tag k="${key}" v="${value}"/>`
+        );
+        element.xml += `${tags}</relation>`;
+        const parser = new DOMParser();
+        const fc = osmtogeojson(parser.parseFromString(element.xml, "text/xml"), {
+          uninterestingTags: {},
+        });
+        const [feature] = fc.features;
+        feature.id = feature.id.replace("relation/", "");
+        element.feature = feature;
+
+        delete element.xml;
+
+        break;
+      }
+
+      case "member": {
+        const element = this[this.state];
+        if (element.type === "relation") {
+          element.xml += "</member>";
+        }
         break;
       }
 
