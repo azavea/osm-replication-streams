@@ -58,7 +58,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "create" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "7434944955")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.nodeCreated.new]);
       });
@@ -67,7 +67,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "modify" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "360444888")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeModified.old,
@@ -79,7 +79,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "delete" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "941243822")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeDeleted.old,
@@ -91,7 +91,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "create" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "794917889")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.wayCreated.new]);
       });
@@ -100,7 +100,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "modify" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "3991402")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.wayModified.old,
@@ -112,7 +112,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "delete" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "237175249")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.wayDeleted.old,
@@ -124,7 +124,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({id: "create"})
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "relation")
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "6061416")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.relationCreated.new]);
       });
@@ -133,7 +133,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({id: "modify"})
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "relation")
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "3619492")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.relationModified.old,
@@ -145,7 +145,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({id: "delete"})
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "relation")
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "6061416")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.relationDeleted.old,
@@ -159,7 +159,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({id: "modify"})
           .map((x) => x.features)
-          .find((x) => x[0].properties.id === "1124369")
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "1124369")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.emptyRelation.old,
