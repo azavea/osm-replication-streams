@@ -25,7 +25,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 10);
+        return assert.strictEqual(result, 11);
       });
 
       it("should encounter the correct number of created objects", async function () {
@@ -41,7 +41,7 @@ describe("Parsers", function () {
           .where({ id: "modify" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 5);
+        return assert.strictEqual(result, 6);
       });
 
       it("should encounter the correct number of deleted objects", async function () {
@@ -138,6 +138,20 @@ describe("Parsers", function () {
         return assert.deepEqual(result, [
           expectations.relationModified.old,
           expectations.relationModified.new
+        ]);
+      });
+
+      it("should handle empty geometries", async function () {
+        // Common for super relations, which we do not handle to be consistent
+        // with usptream augmented diffs returned by Overpass
+        const result = await highland(stream)
+          .where({id: "modify"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.id === "1124369")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.emptyRelation.old,
+          expectations.emptyRelation.new
         ]);
       });
     });

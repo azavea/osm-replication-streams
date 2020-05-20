@@ -493,4 +493,26 @@
 </new>
 </action>
 
+<action type="modify">
+<old>
+  <relation id="1124369" version="90" timestamp="2018-11-22T22:33:51Z" changeset="64795624" uid="9080660" user="أحمدو">
+    <member type="relation" ref="1206310" role=""/>
+    <member type="relation" ref="1205151" role=""/>
+    <member type="relation" ref="1205149" role=""/>
+    <member type="relation" ref="4039486" role=""/>
+    <member type="relation" ref="4039900" role=""/>
+  </relation>
+</old>
+<new>
+  <relation id="1124369" version="95" timestamp="2020-01-16T12:12:19Z" changeset="79649626" uid="18480" user="nickvet419">
+    <member type="relation" ref="1206310" role=""/>
+    <member type="relation" ref="1205151" role=""/>
+    <member type="relation" ref="1205149" role=""/>
+    <member type="relation" ref="4039486" role=""/>
+    <member type="relation" ref="4039900" role=""/>
+    <tag k="alt_name:cs" v="Velká kanadská jezera"/>
+    ...
+</new>
+</action>
+
 </osm>

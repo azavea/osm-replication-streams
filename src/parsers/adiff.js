@@ -1,4 +1,3 @@
-const fs = require("fs");
 const { Transform } = require("stream");
 
 const { featureCollection, lineString, point, polygon } = require("@turf/helpers");
@@ -19,6 +18,11 @@ const xmlAttrsToString = (attributes) => {
   );
 };
 
+const emptyGeometry = {
+  type: "GeometryCollection",
+  geometries: [],
+};
+
 const toGeoJSON = (id, element, prev) => {
   let { tags } = element;
   const visible = element.visible !== "false";
@@ -29,7 +33,8 @@ const toGeoJSON = (id, element, prev) => {
 
   switch (element.type) {
     case "relation": {
-      const { geometry, changeset, timestamp, uid, user, version } = element;
+      const { changeset, timestamp, uid, user, version } = element;
+      const geometry = element.geometry || Object.assign({}, emptyGeometry);
       const properties = {
         id: element.id,
         changeset,
@@ -106,10 +111,7 @@ const toGeoJSON = (id, element, prev) => {
         return {
           id,
           type: "Feature",
-          geometry: {
-            type: "GeometryCollection",
-            geometries: [],
-          },
+          geometry: Object.assign({}, emptyGeometry),
           properties,
         };
       }
@@ -430,8 +432,9 @@ module.exports = class AugmentedDiffParser extends Transform {
         const fc = osmtogeojson(parser.parseFromString(element.xml, "text/xml"), {
           uninterestingTags: {},
         });
-        const [{geometry}] = fc.features;
-        element.geometry = geometry;
+        if (fc.features.length && fc.features[0].geometry) {
+          element.geometry = fc.features[0].geometry;
+        }
 
         delete element.xml;
 
