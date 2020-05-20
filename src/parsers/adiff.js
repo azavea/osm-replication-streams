@@ -275,8 +275,8 @@ module.exports = class AugmentedDiffParser extends Transform {
 
       case "member": {
         const element = this[this.state];
-        element.members.push(attributes);
         if (element.type === "relation") {
+          element.members.push(attributes);
           const attrs = xmlAttrsToString(attributes);
           element.xml += `<member ${attrs}>`;
         }
