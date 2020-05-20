@@ -25,7 +25,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 9);
+        return assert.strictEqual(result, 10);
       });
 
       it("should encounter the correct number of created objects", async function () {
@@ -41,7 +41,7 @@ describe("Parsers", function () {
           .where({ id: "modify" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 4);
+        return assert.strictEqual(result, 5);
       });
 
       it("should encounter the correct number of deleted objects", async function () {
@@ -127,6 +127,18 @@ describe("Parsers", function () {
           .find((x) => x[0].properties.type === "relation")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.relationCreated.new]);
+      });
+
+      it("should generate a modified relation", async function () {
+        const result = await highland(stream)
+          .where({id: "modify"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "relation")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.relationModified.old,
+          expectations.relationModified.new
+        ]);
       });
     });
   });

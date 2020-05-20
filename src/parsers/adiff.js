@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { Transform } = require("stream");
 
 const { featureCollection, lineString, point, polygon } = require("@turf/helpers");
@@ -28,17 +29,16 @@ const toGeoJSON = (id, element, prev) => {
 
   switch (element.type) {
     case "relation": {
-      const { feature } = element;
-      const { geometry } = feature;
+      const { geometry, changeset, timestamp, uid, user, version } = element;
       const properties = {
-        id: feature.id,
-        changeset: feature.properties.changeset,
+        id: element.id,
+        changeset,
         tags,
-        timestamp: feature.properties.timestamp,
+        timestamp,
         type: "relation",
-        uid: feature.properties.uid,
-        user: feature.properties.user,
-        version: feature.properties.version,
+        uid,
+        user,
+        version,
         visible,
       };
       // Return a native geojson object rather than a specific turf.js one. We're relying on
@@ -251,7 +251,7 @@ module.exports = class AugmentedDiffParser extends Transform {
       case "relation":
         this[this.state] = {
           ...attributes,
-          feature: null,
+          geometry: undefined,
           tags: {},
           type: name,
           xml: `<relation ${xmlAttrsToString(attributes)}>`,
@@ -420,17 +420,18 @@ module.exports = class AugmentedDiffParser extends Transform {
 
       case "relation": {
         const element = this[this.state];
+        // Need tags in xml so that osmtogeojson can properly detect areas
         const tags = Object.entries(element.tags).reduce(
-          (tagStr, [key, value]) => `${tagStr}<tag k="${key}" v="${value}"/>`
+          (tagStr, [key, value]) => `${tagStr}<tag k="${key}" v="${value}"/>`,
+          ""
         );
         element.xml += `${tags}</relation>`;
         const parser = new DOMParser();
         const fc = osmtogeojson(parser.parseFromString(element.xml, "text/xml"), {
           uninterestingTags: {},
         });
-        const [feature] = fc.features;
-        feature.id = feature.id.replace("relation/", "");
-        element.feature = feature;
+        const [{geometry}] = fc.features;
+        element.geometry = geometry;
 
         delete element.xml;
 
