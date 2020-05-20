@@ -34,7 +34,17 @@ const toGeoJSON = (id, element, prev) => {
   switch (element.type) {
     case "relation": {
       const { changeset, members, timestamp, uid, user, version } = element;
-      const geometry = element.geometry || Object.assign({}, emptyGeometry);
+      let geometry;
+      // Use previous geometry if the element has been deleted
+      if (prev && prev.geometry && !element.geometry) {
+        // eslint-disable-next-line prefer-destructuring
+        geometry = prev.geometry;
+      } else if (element.geometry) {
+        // eslint-disable-next-line prefer-destructuring
+        geometry = element.geometry;
+      } else {
+        geometry = Object.assign({}, emptyGeometry);
+      }
       const properties = {
         id: element.id,
         changeset,
