@@ -33,11 +33,12 @@ const toGeoJSON = (id, element, prev) => {
 
   switch (element.type) {
     case "relation": {
-      const { changeset, timestamp, uid, user, version } = element;
+      const { changeset, members, timestamp, uid, user, version } = element;
       const geometry = element.geometry || Object.assign({}, emptyGeometry);
       const properties = {
         id: element.id,
         changeset,
+        members,
         tags,
         timestamp,
         type: "relation",
@@ -254,6 +255,7 @@ module.exports = class AugmentedDiffParser extends Transform {
         this[this.state] = {
           ...attributes,
           geometry: undefined,
+          members: [],
           tags: {},
           type: name,
           xml: `<relation ${xmlAttrsToString(attributes)}>`,
@@ -263,6 +265,7 @@ module.exports = class AugmentedDiffParser extends Transform {
 
       case "member": {
         const element = this[this.state];
+        element.members.push(attributes);
         if (element.type === "relation") {
           const attrs = xmlAttrsToString(attributes);
           element.xml += `<member ${attrs}>`;

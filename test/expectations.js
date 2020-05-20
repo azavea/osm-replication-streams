@@ -285,6 +285,18 @@ module.exports = {
       properties: {
         id: "6061416",
         changeset: "954222",
+        members: [
+          {
+            ref: "452593585",
+            role: "inner",
+            type: "way",
+          },
+          {
+            ref: "452593586",
+            role: "outer",
+            type: "way",
+          },
+        ],
         tags: {
           feature_area: "2174979.7",
           length: "8506.9",
@@ -349,6 +361,28 @@ module.exports = {
       properties: {
         id: "3619492",
         changeset: "70186",
+        members: [
+          {
+            ref: "270751911",
+            role: "outer",
+            type: "way",
+          },
+          {
+            ref: "270381081",
+            role: "inner",
+            type: "way",
+          },
+          {
+            ref: "270381089",
+            role: "inner",
+            type: "way",
+          },
+          {
+            ref: "270381079",
+            role: "inner",
+            type: "way",
+          },
+        ],
         tags: {
           "source:datetime": "2014-03-31T22:58:03.000Z",
           type: "multipolygon",
@@ -552,6 +586,13 @@ module.exports = {
       properties: {
         id: "3619492",
         changeset: "954275",
+        members: [
+          {
+            ref: "270751911",
+            role: "outer",
+            type: "way",
+          },
+        ],
         tags: {
           "source:datetime": "2014-03-31T22:58:03.000Z",
           type: "multipolygon",
@@ -712,6 +753,33 @@ module.exports = {
       properties: {
         id: "1124369",
         changeset: "64795624",
+        members: [
+          {
+            ref: "1206310",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "1205151",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "1205149",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "4039486",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "4039900",
+            role: "",
+            type: "relation",
+          },
+        ],
         tags: {},
         timestamp: "2018-11-22T22:33:51Z",
         type: "relation",
@@ -731,6 +799,33 @@ module.exports = {
       properties: {
         id: "1124369",
         changeset: "79649626",
+        members: [
+          {
+            ref: "1206310",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "1205151",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "1205149",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "4039486",
+            role: "",
+            type: "relation",
+          },
+          {
+            ref: "4039900",
+            role: "",
+            type: "relation",
+          },
+        ],
         tags: {
           "alt_name:cs": "Velká kanadská jezera",
         },
