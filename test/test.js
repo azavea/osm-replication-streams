@@ -25,7 +25,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 8);
+        return assert.strictEqual(result, 12);
       });
 
       it("should encounter the correct number of created objects", async function () {
@@ -33,7 +33,7 @@ describe("Parsers", function () {
           .where({ id: "create" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 2);
+        return assert.strictEqual(result, 3);
       });
 
       it("should encounter the correct number of modified objects", async function () {
@@ -41,7 +41,7 @@ describe("Parsers", function () {
           .where({ id: "modify" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 4);
+        return assert.strictEqual(result, 6);
       });
 
       it("should encounter the correct number of deleted objects", async function () {
@@ -49,7 +49,7 @@ describe("Parsers", function () {
           .where({ id: "delete" })
           .reduce(0, (a) => a + 1)
           .toPromise(Promise);
-        return assert.strictEqual(result, 2);
+        return assert.strictEqual(result, 3);
       });
     });
 
@@ -58,7 +58,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "create" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "7434944955")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.nodeCreated.new]);
       });
@@ -67,7 +67,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "modify" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "360444888")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeModified.old,
@@ -79,7 +79,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "delete" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "node")
+          .find((x) => x[0].properties.type === "node" && x[0].properties.id === "941243822")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.nodeDeleted.old,
@@ -91,7 +91,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "create" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "794917889")
           .toPromise(Promise);
         return assert.deepEqual(result, [expectations.wayCreated.new]);
       });
@@ -100,7 +100,7 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "modify" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "3991402")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.wayModified.old,
@@ -112,11 +112,58 @@ describe("Parsers", function () {
         const result = await highland(stream)
           .where({ id: "delete" })
           .map((x) => x.features)
-          .find((x) => x[0].properties.type === "way")
+          .find((x) => x[0].properties.type === "way" && x[0].properties.id === "237175249")
           .toPromise(Promise);
         return assert.deepEqual(result, [
           expectations.wayDeleted.old,
           expectations.wayDeleted.new,
+        ]);
+      });
+
+      it("should generate a created relation", async function () {
+        const result = await highland(stream)
+          .where({id: "create"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "6061416")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [expectations.relationCreated.new]);
+      });
+
+      it("should generate a modified relation", async function () {
+        const result = await highland(stream)
+          .where({id: "modify"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "3619492")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.relationModified.old,
+          expectations.relationModified.new
+        ]);
+      });
+
+      it("should generate a deleted relation", async function () {
+        const result = await highland(stream)
+          .where({id: "delete"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "6061416")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.relationDeleted.old,
+          expectations.relationDeleted.new
+        ]);
+      });
+
+      it("should handle empty geometries", async function () {
+        // Common for super relations, which we do not handle to be consistent
+        // with usptream augmented diffs returned by Overpass
+        const result = await highland(stream)
+          .where({id: "modify"})
+          .map((x) => x.features)
+          .find((x) => x[0].properties.type === "relation" && x[0].properties.id === "1124369")
+          .toPromise(Promise);
+        return assert.deepEqual(result, [
+          expectations.emptyRelation.old,
+          expectations.emptyRelation.new
         ]);
       });
     });
