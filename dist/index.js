@@ -14,6 +14,8 @@ var Changesets = require("./sources/changeset_stream");
 
 var KinesisSource = require("./sources/kinesis_stream");
 
+var Onramp = require("./sources/onramp_stream");
+
 module.exports = {
   BinarySplitter,
   parsers: {
@@ -26,6 +28,7 @@ module.exports = {
     AugmentedDiffs,
     Changes,
     Changesets,
-    Kinesis: KinesisSource
+    Kinesis: KinesisSource,
+    Onramp
   }
 };

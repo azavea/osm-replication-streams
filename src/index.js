@@ -5,6 +5,7 @@ const AugmentedDiffs = require("./sources/adiff_stream");
 const Changes = require("./sources/change_stream");
 const Changesets = require("./sources/changeset_stream");
 const KinesisSource = require("./sources/kinesis_stream");
+const Onramp = require("./sources/onramp_stream");
 
 module.exports = {
   BinarySplitter,
@@ -18,6 +19,7 @@ module.exports = {
     AugmentedDiffs,
     Changes,
     Changesets,
-    Kinesis: KinesisSource
+    Kinesis: KinesisSource,
+    Onramp
   }
 }
