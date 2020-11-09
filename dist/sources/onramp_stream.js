@@ -12,13 +12,17 @@ var _ = require("highland");
 
 var AWS = require("aws-sdk");
 
-var url = require("url");
+var jsYaml = require("js-yaml");
 
-var yaml = require("js-yaml");
+var _require = require("stream"),
+    Readable = _require.Readable;
+
+var url = require("url");
 
 var zlib = require("zlib");
 
 var S3 = new AWS.S3();
+var EMPTY_DIFF = '<osm generator="osm-replication-streams" version="0.6"><note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note></osm>';
 
 function trim(s, c) {
   if (c === "]") c = "\\]";
@@ -70,26 +74,71 @@ function () {
   };
 }();
 
-function getChange(sequence, _ref3) {
-  var baseURL = _ref3.baseURL;
+function getChange(_x2, _x3) {
+  return _getChange.apply(this, arguments);
+}
 
-  try {
-    var sequenceStr = sequence.toString().padStart(9, '0');
-    var pt1 = sequenceStr.slice(0, 3);
-    var pt2 = sequenceStr.slice(3, 6);
-    var pt3 = sequenceStr.slice(6, 9);
-    var diffUrl = new url.URL(`${trim(baseURL, "/")}/${pt1}/${pt2}/${pt3}.xml.gz`);
-    var params = {
-      Bucket: diffUrl.host,
-      Key: trim(diffUrl.pathname, "/")
-    };
-    var s3Stream = S3.getObject(params).createReadStream();
-    s3Stream.sequenceNumber = sequence;
-    return s3Stream;
-  } catch (err) {
-    console.warn(`Failed to get change ${sequence}: ${err.message}`);
-    throw err;
-  }
+function _getChange() {
+  _getChange = _asyncToGenerator(
+  /*#__PURE__*/
+  regeneratorRuntime.mark(function _callee3(sequence, _ref3) {
+    var baseURL, sequenceStr, pt1, pt2, pt3, diffUrl, params, emptyStream, s3Stream;
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+      while (1) {
+        switch (_context3.prev = _context3.next) {
+          case 0:
+            baseURL = _ref3.baseURL;
+            sequenceStr = sequence.toString().padStart(9, '0');
+            pt1 = sequenceStr.slice(0, 3);
+            pt2 = sequenceStr.slice(3, 6);
+            pt3 = sequenceStr.slice(6, 9);
+            diffUrl = new url.URL(`${trim(baseURL, "/")}/${pt1}/${pt2}/${pt3}.xml.gz`);
+            params = {
+              Bucket: diffUrl.host,
+              Key: trim(diffUrl.pathname, "/")
+            }; // First check if object exists because I can't figure out how to intercept a read error
+            // and substitute an empty diff later when the readObject request is converted
+            // with createReadStream
+
+            _context3.prev = 7;
+            _context3.next = 10;
+            return S3.headObject(params).promise();
+
+          case 10:
+            _context3.next = 21;
+            break;
+
+          case 12:
+            _context3.prev = 12;
+            _context3.t0 = _context3["catch"](7);
+
+            if (!(_context3.t0.statusCode === 404)) {
+              _context3.next = 19;
+              break;
+            }
+
+            console.warn(`Found 404 for ${params}. Continuing with empty diff.`);
+            emptyStream = Readable.from([EMPTY_DIFF]).pipe(zlib.createGzip());
+            emptyStream.sequenceNumber = sequence;
+            return _context3.abrupt("return", emptyStream);
+
+          case 19:
+            console.warn(`Failed to get change ${sequence}: ${_context3.t0.statusCode} ${_context3.t0.code}`);
+            throw _context3.t0;
+
+          case 21:
+            s3Stream = S3.getObject(params).createReadStream();
+            s3Stream.sequenceNumber = sequence;
+            return _context3.abrupt("return", s3Stream);
+
+          case 24:
+          case "end":
+            return _context3.stop();
+        }
+      }
+    }, _callee3, null, [[7, 12]]);
+  }));
+  return _getChange.apply(this, arguments);
 }
 
 module.exports = function (options) {
@@ -151,48 +200,52 @@ module.exports = function (options) {
 
             case 12:
               if (!(state <= nextState)) {
-                _context2.next = 19;
-                break;
-              }
-
-              changeStream = getChange(state, {
-                baseURL: opts.baseURL
-              });
-              push(null, changeStream);
-              state++;
-              next();
-              _context2.next = 22;
-              break;
-
-            case 19:
-              if (!options.infinite) {
                 _context2.next = 21;
                 break;
               }
 
-              return _context2.abrupt("return", setTimeout(next, opts.delay));
+              _context2.next = 15;
+              return getChange(state, {
+                baseURL: opts.baseURL
+              });
 
-            case 21:
-              return _context2.abrupt("return", push(null, _.nil));
-
-            case 22:
-              _context2.next = 27;
+            case 15:
+              changeStream = _context2.sent;
+              push(null, changeStream);
+              state++;
+              next();
+              _context2.next = 24;
               break;
 
+            case 21:
+              if (!options.infinite) {
+                _context2.next = 23;
+                break;
+              }
+
+              return _context2.abrupt("return", setTimeout(next, opts.delay));
+
+            case 23:
+              return _context2.abrupt("return", push(null, _.nil));
+
             case 24:
-              _context2.prev = 24;
+              _context2.next = 29;
+              break;
+
+            case 26:
+              _context2.prev = 26;
               _context2.t1 = _context2["catch"](0);
               return _context2.abrupt("return", setTimeout(next, opts.delay));
 
-            case 27:
+            case 29:
             case "end":
               return _context2.stop();
           }
         }
-      }, _callee2, null, [[0, 24], [5, 9]]);
+      }, _callee2, null, [[0, 26], [5, 9]]);
     }));
 
-    return function (_x2, _x3) {
+    return function (_x4, _x5) {
       return _ref4.apply(this, arguments);
     };
   }()).map(function (s) {
@@ -200,11 +253,11 @@ module.exports = function (options) {
     s2.sequenceNumber = s.sequenceNumber;
     return s2;
   }).map(function (s) {
-    var startMarker = yaml.dump({
+    var startMarker = jsYaml.dump({
       status: "start",
       sequenceNumber: s.sequenceNumber
     });
-    var endMarker = yaml.dump({
+    var endMarker = jsYaml.dump({
       status: "end",
       sequenceNumber: s.sequenceNumber
     });

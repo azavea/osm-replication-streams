@@ -1,10 +1,13 @@
 const _ = require("highland");
 const AWS = require("aws-sdk");
+const jsYaml = require("js-yaml");
+const { Readable } = require("stream");
 const url = require("url");
-const yaml = require("js-yaml");
 const zlib = require("zlib");
 
 const S3 = new AWS.S3();
+
+const EMPTY_DIFF = '<osm generator="osm-replication-streams" version="0.6"><note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note></osm>';
 
 function trim(s, c) {
   if (c === "]") c = "\\]";
@@ -30,25 +33,36 @@ const getMostRecentReplicationSequence = async ({ baseURL }) => {
   }
 };
 
-function getChange(sequence, { baseURL }) {
-  try {
-    const sequenceStr = sequence.toString().padStart(9, '0');
-    const pt1 = sequenceStr.slice(0, 3);
-    const pt2 = sequenceStr.slice(3, 6);
-    const pt3 = sequenceStr.slice(6, 9);
-    const diffUrl = new url.URL(`${trim(baseURL, "/")}/${pt1}/${pt2}/${pt3}.xml.gz`);
+async function getChange(sequence, { baseURL }) {
+  const sequenceStr = sequence.toString().padStart(9, '0');
+  const pt1 = sequenceStr.slice(0, 3);
+  const pt2 = sequenceStr.slice(3, 6);
+  const pt3 = sequenceStr.slice(6, 9);
+  const diffUrl = new url.URL(`${trim(baseURL, "/")}/${pt1}/${pt2}/${pt3}.xml.gz`);
+  const params = {
+    Bucket: diffUrl.host,
+    Key: trim(diffUrl.pathname, "/"),
+  };
 
-    const params = {
-      Bucket: diffUrl.host,
-      Key: trim(diffUrl.pathname, "/"),
-    };
-    const s3Stream = S3.getObject(params).createReadStream();
-    s3Stream.sequenceNumber = sequence;
-    return s3Stream;
+  // First check if object exists because I can't figure out how to intercept a read error
+  // and substitute an empty diff later when the readObject request is converted
+  // with createReadStream
+  try {
+    await S3.headObject(params).promise();
   } catch (err) {
-    console.warn(`Failed to get change ${sequence}: ${err.message}`);
+    if (err.statusCode === 404) {
+      console.warn(`Found 404 for ${params}. Continuing with empty diff.`);
+      const emptyStream = Readable.from([EMPTY_DIFF]).pipe(zlib.createGzip());
+      emptyStream.sequenceNumber = sequence;
+      return emptyStream;
+    }
+    console.warn(`Failed to get change ${sequence}: ${err.statusCode} ${err.code}`);
     throw err;
   }
+
+  const s3Stream = S3.getObject(params).createReadStream();
+  s3Stream.sequenceNumber = sequence;
+  return s3Stream;
 }
 
 module.exports = options => {
@@ -88,7 +102,7 @@ module.exports = options => {
       }
 
       if (state <= nextState) {
-        const changeStream = getChange(state, { baseURL: opts.baseURL });
+        const changeStream = await getChange(state, { baseURL: opts.baseURL });
 
         push(null, changeStream);
 
@@ -113,12 +127,12 @@ module.exports = options => {
       return s2;
     })
     .map(s => {
-      const startMarker = yaml.dump({
+      const startMarker = jsYaml.dump({
         status: "start",
         sequenceNumber: s.sequenceNumber
       });
 
-      const endMarker = yaml.dump({
+      const endMarker = jsYaml.dump({
         status: "end",
         sequenceNumber: s.sequenceNumber
       });
